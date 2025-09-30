@@ -14,9 +14,9 @@
   <div class="form-group mt-2">
     <%= label_tag :sort_by, "Sort by:", class: "form-label me-2" %>
     <%= select_tag :sort_by,
-          options_for_select([["Title", "title"], ["Release Date", "release_date"]],
-                             @sort_by),
-          id: "sort_by", class: "form-select d-inline w-auto" %>
+      options_for_select([["Title", "title"], ["Release Date", "release_date"]],
+                         @sort),
+      id: "sort_by", class: "form-select d-inline w-auto" %>
   </div>
 
   <%= submit_tag 'Refresh', id: 'ratings_submit', class: 'btn btn-primary mt-2' %>

@@ -11,8 +11,7 @@ class MoviesController < ApplicationController
   
     # --- Determine ratings ---
     if params[:ratings]
-      ratings_hash = params[:ratings].to_unsafe_h
-      @ratings_to_show = ratings_hash.keys
+      @ratings_to_show = params[:ratings].keys
     elsif session[:ratings]
       @ratings_to_show = session[:ratings].keys
     else
@@ -33,11 +32,11 @@ class MoviesController < ApplicationController
       redirect_to movies_path(redirect_params) and return
     end
   
-    # --- Update session ---
+    # --- Save current settings in session ---
     session[:ratings] = @ratings_to_show.map { |r| [r, "1"] }.to_h
     session[:sort_by] = @sort if @sort
   
-    # --- Filter and sort movies ---
+    # --- Fetch movies ---
     @movies = Movie.with_ratings(@ratings_to_show)
     case @sort
     when 'title'
@@ -47,9 +46,7 @@ class MoviesController < ApplicationController
       @movies = @movies.order(:release_date)
       @release_date_header = 'hilite bg-warning'
     end
-  end
-  
-  
+  end  
 
   def new
     # default: render 'new' template
