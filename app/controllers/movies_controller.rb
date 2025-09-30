@@ -9,7 +9,7 @@ class MoviesController < ApplicationController
   def index
     @all_ratings = Movie.all_ratings
   
-    # --- Ratings ---
+    # --- Determine ratings ---
     if params[:ratings]
       ratings_hash = params[:ratings].to_unsafe_h
       @ratings_to_show = ratings_hash.keys
@@ -19,22 +19,32 @@ class MoviesController < ApplicationController
       @ratings_to_show = @all_ratings
     end
   
-    # --- Sort ---
+    # --- Determine sort ---
     @sort = params[:sort_by] || session[:sort_by]
   
-    # --- Redirect if params missing ---
-    if (params[:ratings].nil? || params[:sort_by].nil?) && (session[:ratings] || session[:sort_by])
-      redirect_to movies_path(
-        ratings: session[:ratings] || @ratings_to_show.map { |r| [r, 1] }.to_h,
-        sort_by: session[:sort_by] || @sort
-      ) and return
+    # --- Redirect to RESTful URL if any param is missing ---
+    redirect_needed = false
+    redirect_params = {}
+  
+    if params[:ratings].nil? && session[:ratings]
+      redirect_needed = true
+      redirect_params[:ratings] = session[:ratings]
+    end
+  
+    if params[:sort_by].nil? && session[:sort_by]
+      redirect_needed = true
+      redirect_params[:sort_by] = session[:sort_by]
+    end
+  
+    if redirect_needed
+      redirect_to movies_path(redirect_params) and return
     end
   
     # --- Update session ---
     session[:ratings] = @ratings_to_show.map { |r| [r, "1"] }.to_h
     session[:sort_by] = @sort if @sort
   
-    # --- Fetch movies ---
+    # --- Filter and sort movies ---
     @movies = Movie.with_ratings(@ratings_to_show)
     case @sort
     when 'title'
