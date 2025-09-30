@@ -26,17 +26,10 @@ class MoviesController < ApplicationController
     redirect_needed = false
     redirect_params = {}
   
-    if params[:ratings].nil? && session[:ratings]
-      redirect_needed = true
-      redirect_params[:ratings] = session[:ratings]
-    end
+    redirect_params[:ratings] = session[:ratings] if params[:ratings].nil? && session[:ratings]
+    redirect_params[:sort_by] = session[:sort_by] if params[:sort_by].nil? && session[:sort_by]
   
-    if params[:sort_by].nil? && session[:sort_by]
-      redirect_needed = true
-      redirect_params[:sort_by] = session[:sort_by]
-    end
-  
-    if redirect_needed
+    if redirect_params.any?
       redirect_to movies_path(redirect_params) and return
     end
   
@@ -54,7 +47,8 @@ class MoviesController < ApplicationController
       @movies = @movies.order(:release_date)
       @release_date_header = 'hilite bg-warning'
     end
-  end  
+  end
+  
   
 
   def new
