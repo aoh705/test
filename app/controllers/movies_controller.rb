@@ -9,20 +9,23 @@ class MoviesController < ApplicationController
   def index
     @all_ratings = Movie.all_ratings
     @sort = params[:sort_by] || session[:sort_by]
-
+  
     # Normalize ratings from params or session
     @ratings_to_show = (
       normalized_ratings(params[:ratings]) ||
       normalized_ratings(session[:ratings]) ||
       Hash[@all_ratings.map { |r| [r, "1"] }]
     )
-
-    # Redirect if session and params are out of sync
-    if ratings_changed? || sort_changed?
-      update_session
+  
+    # Only redirect if params[:ratings] is missing (to RESTful URL)
+    if params[:ratings].nil? && (session[:ratings].present? || session[:sort_by].present?)
       redirect_to movies_path(sort_by: @sort, ratings: @ratings_to_show) and return
     end
-
+  
+    # Update session
+    session[:ratings] = @ratings_to_show
+    session[:sort_by] = @sort
+  
     # Fetch movies filtered by ratings
     @movies = Movie.with_ratings(@ratings_to_show.keys)
     apply_sorting
@@ -31,9 +34,15 @@ class MoviesController < ApplicationController
   private
 
   # Convert ActionController::Parameters to plain Hash with string keys
-  def normalized_ratings(ratings)
-    return unless ratings
-    ratings.respond_to?(:to_unsafe_h) ? ratings.to_unsafe_h.stringify_keys : ratings.stringify_keys
+  def normalized_ratings(ratings_param)
+    case ratings_param
+    when Hash
+      ratings_param.stringify_keys
+    when Array
+      ratings_param.map { |r| [r, "1"] }.to_h
+    else
+      nil
+    end
   end
 
   def ratings_changed?
