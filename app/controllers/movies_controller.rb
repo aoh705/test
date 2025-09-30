@@ -8,134 +8,48 @@ class MoviesController < ApplicationController
 
   def index
     @all_ratings = Movie.all_ratings
-  
-    # --- ratings ---
-    if params[:ratings].present?
-      if params[:ratings].is_a?(ActionController::Parameters)
-        # Convert to plain hash
-        session[:ratings] = params[:ratings].to_unsafe_h
-      else
-        session[:ratings] = Hash[Array(params[:ratings]).map { |r| [r, "1"] }]
-      end
-    elsif session[:ratings].present?
-      # no params, but session exists → redirect to RESTful URL
-      return redirect_to movies_path(sort_by: session[:sort_by], ratings: session[:ratings])
+
+    # Determine current sort (from params or session)
+    @sort = params[:sort_by] || session[:sort_by]
+
+    # Determine ratings to show
+    if params[:ratings]
+      # User submitted ratings (Hash or Array)
+      @ratings_to_show = params[:ratings].is_a?(Hash) ? params[:ratings].keys : params[:ratings]
+      # Store in session as a Hash for later
+      session[:ratings] = @ratings_to_show.map { |r| [r, "1"] }.to_h
+    elsif session[:ratings]
+      # No ratings param, use session
+      @ratings_to_show = session[:ratings].keys
     else
-      # nothing in params or session → default to all
-      session[:ratings] = Hash[@all_ratings.map { |r| [r, "1"] }]
+      # Default: show all ratings
+      @ratings_to_show = @all_ratings
     end
-    @ratings_to_show = session[:ratings]
-  
-    # --- sort ---
-    if params[:sort_by].present?
-      session[:sort_by] = params[:sort_by]
-    elsif session[:sort_by].present?
-      # keep sort persistent in URL
-      return redirect_to movies_path(sort_by: session[:sort_by], ratings: session[:ratings])
+
+    # Only redirect if missing params to maintain RESTful URLs
+    if (params[:ratings].nil? || params[:sort_by].nil?) &&
+      (session[:ratings].present? || session[:sort_by].present?) &&
+      !(params[:ratings].present? && params[:sort_by].present?)
+      redirect_to movies_path(sort_by: session[:sort_by], ratings: session[:ratings]) and return
     end
-    @sort = session[:sort_by]
-  
-    # --- fetch movies ---
-    @movies = Movie.with_ratings(@ratings_to_show.keys)
+
+    # Update session for sort
+    session[:sort_by] = @sort if @sort
+
+    # Fetch filtered movies
+    @movies = Movie.with_ratings(@ratings_to_show)
+
+    # Apply sorting
     case @sort
-    when "title"
+    when 'title'
       @movies = @movies.order(:title)
-      @title_header = "hilite bg-warning"
-    when "release_date"
+      @title_header = 'hilite bg-warning'
+    when 'release_date'
       @movies = @movies.order(:release_date)
-      @release_date_header = "hilite bg-warning"
+      @release_date_header = 'hilite bg-warning'
     end
   end
   
-
-
-  # private
-
-  # # Convert ActionController::Parameters to plain Hash with string keys
-  # def normalized_ratings(ratings_param)
-  #   case ratings_param
-  #   when Hash
-  #     ratings_param.stringify_keys
-  #   when Array
-  #     ratings_param.map { |r| [r, "1"] }.to_h
-  #   else
-  #     nil
-  #   end
-  # end
-
-  # def ratings_changed?
-  #   normalized_ratings(params[:ratings]) != session[:ratings]
-  # end
-
-  # def sort_changed?
-  #   params[:sort_by] != session[:sort_by]
-  # end
-
-  # def update_session
-  #   session[:sort_by] = @sort
-  #   session[:ratings] = @ratings_to_show
-  # end
-
-  # def apply_sorting
-  #   case @sort
-  #   when "title"
-  #     @title_header = 'hilite bg-warning'
-  #     @movies = @movies.order(:title)
-  #   when "release_date"
-  #     @release_date_header = 'hilite bg-warning'
-  #     @movies = @movies.order(:release_date)
-  #   end
-  # end
-
-  # def index
-  #   @all_ratings = Movie.all_ratings
-
-  #   # --- ratings ---
-  #   if params[:ratings].present?
-  #     if params[:ratings].is_a?(Hash)
-  #       @ratings_to_show = params[:ratings].keys
-  #       session[:ratings] = params[:ratings]
-  #     else # Array
-  #       @ratings_to_show = params[:ratings]
-  #       session[:ratings] = Hash[@ratings_to_show.map { |r| [r, "1"] }]
-  #     end
-  #   elsif params[:commit] == "Refresh"
-  #     @ratings_to_show = @all_ratings
-  #     session.delete(:ratings)
-  #   elsif session[:ratings].present?
-  #     @ratings_to_show = session[:ratings].keys
-  #   else
-  #     @ratings_to_show = @all_ratings
-  #   end
-
-  #   # --- sort ---
-  #   if params[:sort_by].present?
-  #     @sort_by = params[:sort_by]
-  #     session[:sort_by] = @sort_by
-  #   elsif session[:sort_by].present?
-  #     @sort_by = session[:sort_by]
-  #   else
-  #     @sort_by = nil
-  #   end
-
-  #   # --- redirect to RESTful URL if missing params ---
-  #   if (params[:ratings].nil? && params[:sort_by].nil?) &&
-  #     (session[:ratings].present? || session[:sort_by].present?)
-  #     redirect_to movies_path(sort_by: session[:sort_by], ratings: session[:ratings]) and return
-  #   end
-
-  #   # --- movies + highlighting ---
-  #   @movies = Movie.with_ratings(@ratings_to_show)
-  #   case @sort_by
-  #   when 'title'
-  #     @movies = @movies.order(:title)
-  #     @title_header = 'hilite bg-warning'
-  #   when 'release_date'
-  #     @movies = @movies.order(:release_date)
-  #     @release_date_header = 'hilite bg-warning'
-  #   end
-  # end 
-
   def new
     # default: render 'new' template
   end
