@@ -1,13 +1,15 @@
 class Movie < ActiveRecord::Base
+  # Return all ratings in the DB (unique, sorted)
   def self.all_ratings
-    %w(G PG PG-13 R)
+    distinct.pluck(:rating).sort
   end
 
-  def self.with_ratings(ratings)
-    if ratings.nil? || ratings.empty?
+  # Return only movies with the given ratings
+  def self.with_ratings(ratings_list)
+    if ratings_list.nil? || ratings_list.empty?
       all
     else
-      where(rating: ratings)
+      where(rating: ratings_list)
     end
   end
 end
