@@ -8,13 +8,9 @@ class MoviesController < ApplicationController
 
   def index
     @all_ratings = Movie.all_ratings
-  
-    # --- Determine current sort ---
-    @sort = params[:sort_by] || session[:sort_by]
-  
-    # --- Determine ratings to show ---
+
+    # --- Determine ratings ---
     if params[:ratings]
-      # Convert ActionController::Parameters to plain Hash
       ratings_hash = params[:ratings].to_unsafe_h
       @ratings_to_show = ratings_hash.keys
       session[:ratings] = @ratings_to_show.map { |r| [r, "1"] }.to_h
@@ -23,22 +19,23 @@ class MoviesController < ApplicationController
     else
       @ratings_to_show = @all_ratings
     end
-  
-    # --- Redirect to RESTful URL if params are missing ---
+
+    # --- Determine sort ---
+    @sort = params[:sort_by] || session[:sort_by]
+
+    # --- Redirect to RESTful URL if params missing ---
     if (params[:ratings].nil? || params[:sort_by].nil?) && (session[:ratings] || session[:sort_by])
       redirect_to movies_path(
-        sort_by: @sort,
-        ratings: session[:ratings]
+        ratings: session[:ratings],
+        sort_by: session[:sort_by]
       ) and return
     end
-  
-    # --- Update session for sort ---
+
+    # --- Update session ---
     session[:sort_by] = @sort if @sort
-  
-    # --- Fetch filtered movies ---
+
+    # --- Filter and sort movies ---
     @movies = Movie.with_ratings(@ratings_to_show)
-  
-    # --- Apply sorting ---
     case @sort
     when 'title'
       @movies = @movies.order(:title)
@@ -47,7 +44,8 @@ class MoviesController < ApplicationController
       @movies = @movies.order(:release_date)
       @release_date_header = 'hilite bg-warning'
     end
-  end  
+  end
+  
 
   def new
     # default: render 'new' template
