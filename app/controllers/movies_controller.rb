@@ -8,38 +8,37 @@ class MoviesController < ApplicationController
 
   def index
     @all_ratings = Movie.all_ratings
-
-    # Determine current sort (from params or session)
+  
+    # --- Determine current sort ---
     @sort = params[:sort_by] || session[:sort_by]
-
-    # Determine ratings to show
+  
+    # --- Determine ratings to show ---
     if params[:ratings]
-      # User submitted ratings (Hash or Array)
-      @ratings_to_show = params[:ratings].is_a?(Hash) ? params[:ratings].keys : params[:ratings]
-      # Store in session as a Hash for later
+      # Convert ActionController::Parameters to plain Hash
+      ratings_hash = params[:ratings].to_unsafe_h
+      @ratings_to_show = ratings_hash.keys
       session[:ratings] = @ratings_to_show.map { |r| [r, "1"] }.to_h
     elsif session[:ratings]
-      # No ratings param, use session
       @ratings_to_show = session[:ratings].keys
     else
-      # Default: show all ratings
       @ratings_to_show = @all_ratings
     end
-
-    # Only redirect if missing params to maintain RESTful URLs
-    if (params[:ratings].nil? || params[:sort_by].nil?) &&
-      (session[:ratings].present? || session[:sort_by].present?) &&
-      !(params[:ratings].present? && params[:sort_by].present?)
-      redirect_to movies_path(sort_by: session[:sort_by], ratings: session[:ratings]) and return
+  
+    # --- Redirect to RESTful URL if params are missing ---
+    if (params[:ratings].nil? || params[:sort_by].nil?) && (session[:ratings] || session[:sort_by])
+      redirect_to movies_path(
+        sort_by: @sort,
+        ratings: session[:ratings]
+      ) and return
     end
-
-    # Update session for sort
+  
+    # --- Update session for sort ---
     session[:sort_by] = @sort if @sort
-
-    # Fetch filtered movies
+  
+    # --- Fetch filtered movies ---
     @movies = Movie.with_ratings(@ratings_to_show)
-
-    # Apply sorting
+  
+    # --- Apply sorting ---
     case @sort
     when 'title'
       @movies = @movies.order(:title)
@@ -48,8 +47,8 @@ class MoviesController < ApplicationController
       @movies = @movies.order(:release_date)
       @release_date_header = 'hilite bg-warning'
     end
-  end
-  
+  end  
+
   def new
     # default: render 'new' template
   end
