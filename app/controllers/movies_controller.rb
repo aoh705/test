@@ -9,19 +9,23 @@ class MoviesController < ApplicationController
   def index
     @all_ratings = Movie.all_ratings
   
-    # ratings
     if params[:ratings].present?
-      @ratings_to_show = params[:ratings].keys
+      if params[:ratings].is_a?(Hash)
+        @ratings_to_show = params[:ratings].keys
+      else
+        @ratings_to_show = params[:ratings]
+      end
       session[:ratings] = params[:ratings]
     elsif params[:commit] == "Refresh"
-      # user hit Refresh with nothing checked → show all
       @ratings_to_show = @all_ratings
       session.delete(:ratings)
     elsif session[:ratings].present?
-      # no params, but session exists → remember previous selections
-      @ratings_to_show = session[:ratings].keys
+      if session[:ratings].is_a?(Hash)
+        @ratings_to_show = session[:ratings].keys
+      else
+        @ratings_to_show = session[:ratings]
+      end
     else
-      # first time → show all
       @ratings_to_show = @all_ratings
     end
   
@@ -33,7 +37,6 @@ class MoviesController < ApplicationController
       @sort_by = session[:sort_by]
     else
       @sort_by = nil
-      Rails.logger.debug "No sort"
     end
   
     # redirect to RESTful URL if missing params
