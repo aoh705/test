@@ -7,8 +7,52 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @movies = Movie.all
-  end
+    @all_ratings = Movie.all_ratings
+  
+    # ratings
+    if params[:ratings].present?
+      @ratings_to_show = params[:ratings].keys
+      session[:ratings] = params[:ratings]
+    elsif params[:commit] == "Refresh"
+      # user hit Refresh with nothing checked → show all
+      @ratings_to_show = @all_ratings
+      session.delete(:ratings)
+    elsif session[:ratings].present?
+      # no params, but session exists → remember previous selections
+      @ratings_to_show = session[:ratings].keys
+    else
+      # first time → show all
+      @ratings_to_show = @all_ratings
+    end
+  
+    # sort
+    if params[:sort_by].present?
+      @sort_by = params[:sort_by]
+      session[:sort_by] = @sort_by
+    elsif session[:sort_by].present?
+      @sort_by = session[:sort_by]
+    else
+      @sort_by = nil
+      Rails.logger.debug "No sort"
+    end
+  
+    # redirect to RESTful URL if missing params
+    if (params[:ratings].nil? && params[:sort_by].nil?) &&
+       (session[:ratings].present? || session[:sort_by].present?)
+      redirect_to movies_path(sort_by: session[:sort_by], ratings: session[:ratings]) and return
+    end
+  
+    # movies + highlighting
+    @movies = Movie.with_ratings(@ratings_to_show)
+    case @sort_by
+    when 'title'
+      @movies = @movies.order(:title)
+      @title_header = 'hilite bg-warning'
+    when 'release_date'
+      @movies = @movies.order(:release_date)
+      @release_date_header = 'hilite bg-warning'
+    end
+  end 
 
   def new
     # default: render 'new' template
